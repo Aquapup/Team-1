@@ -19,11 +19,11 @@ import racecar_utils as rc_utils
 ########################################################################################
 # Global variables
 ########################################################################################
-driveCircle = False
-driveSquare = False
-driveEight = False
-driveHeart = False
-counter = 0
+counter=0
+isDrivingCircle=False
+isDrivingSquare=False
+isDrivingFigure8=False
+isDrivingTri= False
 rc = racecar_core.create_racecar()
 
 # Put any global variables here
@@ -56,128 +56,110 @@ def start():
 
 
 def update():
-    
     """
     After start() is run, this function is run every frame until the back button
     is pressed
     """
     # TODO (warmup): Implement acceleration and steering
-    global driveCircle
+    #rc.drive.set_speed_angle(0, 0)
     global counter
+    global isDrivingCircle
+    global isDrivingSquare
+    global isDrivingFigure8
+    global isDrivingTri
     if rc.controller.was_pressed(rc.controller.Button.A):
-        counter = 0
-        driveCircle = True
+
         print("Driving in a circle...")
         # TODO (main challenge): Drive in a circle
-    if driveCircle:
-        counter += rc.get_delta_time()
+    # First go straight for 2 seconds and then take 1.2 second to make a 90 degree turn and repeated this 4 times to draw a square.  
+        isDrivingCircle = True
 
-        if counter < 7:
-            #turn continously for 7 seconds
-            rc.drive.set_speed_angle(1,1)
+    if isDrivingCircle:
+        counter += rc.get_delta_time()
+        print(counter)
+        if(counter<11.6):
+            rc.drive.set_speed_angle(0.5,1)
         else:
-            #stop the car
             rc.drive.stop()
-            driveCircle = False
-                
+            isDriving = False
+
+                #rc.drive.set_speed_angle(1,0)
+            # else:
+         # Otherwise, stop the car
 
     # TODO (main challenge): Drive in a square when the B button is pressed
-    global driveSquare
-    if rc.controller.was_pressed(rc.controller.Button.B):
-        counter = 0
-        driveSquare = True
-        print("Driving in a square...")
+    if(rc.controller.was_pressed(rc.controller.Button.B)):
+        print("Driving in a Square... ")
+        isDrivingSquare=True
     
-    if driveSquare:
-        counter += rc.get_delta_time()
+    if isDrivingSquare:
+        counter+= rc.get_delta_time()
+    #     print(counter)
+        ts=2
+        tt=1.65
 
-        if counter < 1: #first line
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 3:
-            rc.drive.set_speed_angle(1,1) # ~right turn
-        elif counter < 4: #second line
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 6:
-            rc.drive.set_speed_angle(1,1) # ~right turn
-        elif counter <7: #third line
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 9:
-            rc.drive.set_speed_angle(1,1) # ~right turn
-        elif counter < 10: #fourth line 
-           rc.drive.set_speed_angle(1,0)
-        elif counter < 12:
-            rc.drive.set_speed_angle(1,1) # ~right turn
-        else:
-            #finally, stop the car
-            rc.drive.stop()
-            driveSquare = False 
+    #     global i
+    #     for i in range(0,3):
 
-    # TODO (main ch allenge): Drive in a figure eight when the X button is pressed
-    global driveEight
-    if rc.controller.was_pressed(rc.controller.Button.X):
-        counter = 0
-        driveEight = True
-        print("Driving in a Figure Eight")
-
-    if driveEight: 
-        counter += rc.get_delta_time()
-
-        if counter < 1:
-            #move forward
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 4:
-            #turn for the first 8 curve
+    #         rc.drive.set_speed_angle(0.1,1)
+    #         rc.drive.stop()
+    #         rc.drive.set_speed_angle(1,0)
+        if(counter<ts):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<ts+tt):
             rc.drive.set_speed_angle(1,1)
-        elif counter < 5:
-            #move forward slightly
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 9:
-            #turn for second 8 curve
+        elif(counter<2*ts+tt):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<2*ts+2*tt):
+            rc.drive.set_speed_angle(1,1)
+        elif(counter<3*ts+2*tt):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<3*ts+3*tt):
+            rc.drive.set_speed_angle(1,1)
+        elif(counter<4*ts+3*tt):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<4*ts+4*tt):
             rc.drive.set_speed_angle(1,1)
         else:
-            #finally, stop the car
             rc.drive.stop()
-            driveSquare = False     
-
-
-
-
+    # TODO (main challenge): Drive in a figure eight when the X button is pressed
+    if(rc.controller.was_pressed(rc.controller.Button.X)):
+        print("Driving in a Figure 8")
+        isDrivingFigure8= True
+    if isDrivingFigure8:
+        counter+= rc.get_delta_time()
+        if(counter<11.6):
+            rc.drive.set_speed_angle(0.5,1)
+        elif(counter<23.2):
+            rc.drive.set_speed_angle(0.5,-1)
     # TODO (main challenge): Drive in a shape of your choice when the Y button
     # is pressed
 
-    global driveHeart
-    if rc.controller.was_pressed(rc.controller.Button.Y):
-        counter = 0
-        driveHeart = True
-        print("Driving in a heart")
-    
-    if driveHeart:
-        counter += rc.get_delta_time()
+    if(rc.controller.was_pressed(rc.controller.Button.Y)):
+        print("Driving in a Triangle")
+        isDrivingTri=True
+        global trs
+        global trts
+        trs=2
+        trts=2
 
-        if counter < 0.5:
-            #slight turn
-            rc.drive.set_speed_angle(1, -1)
-        elif counter < 2.5:
-            #move forward
-            rc.drive.set_speed_angle(1,0)
-        elif counter < 3.5: 
-            #turn for first heart curve 
+
+    if isDrivingTri:
+        counter+= rc.get_delta_time()
+        if(counter<trs):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<trs+trts):
             rc.drive.set_speed_angle(1,1)
-        elif counter < 4:
-            #slight turn
-            rc.drive.set_speed_angle(1, -1)
-        elif counter < 6.5:
-            #second heart curve
+        elif(counter<2*trs+trts):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<2*trs+2*trts):
             rc.drive.set_speed_angle(1,1)
-        elif counter < 8.5:
-            #move forward
-            rc.drive.set_speed_angle(1,0)
+        elif(counter<3*trs+2*trts):
+            rc.drive.set_speed_angle(0.5,0)
+        elif(counter<3*trs+3*trts):
+            rc.drive.set_speed_angle(1,1)
         else:
-            #finally, stop the car
             rc.drive.stop()
-            driveSquare = False 
-
-
 ########################################################################################
 # DO NOT MODIFY: Register start and update and begin execution
 ########################################################################################
