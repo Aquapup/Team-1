@@ -77,10 +77,27 @@ def update():
 
     # TODO (main challenge): Drive in a square when the B button is pressed
 
+    if rc.controller.was_pressed(rc.controller.Button.B):
+         print("Driving in a square...")
+        # TODO (main challenge): Drive in a circle
+         drive_square()
+    if len(queue) > 0:
+        speed = queue[0][1]
+        angle = queue[0][2]
+        queue[0][0] -= rc.get_delta_time()
+        if queue[0][0] <= 0:
+            queue.pop(0)
+
+    rc.drive.set_speed_angle(speed, angle)
     # TODO (main challenge): Drive in a figure eight when the X button is pressed
 
+    if rc.controller.was_pressed(rc.controller.Button.X):
+        rc.drive.set_speed_angle(speed, angle)
+
     # TODO (main challenge): Drive in a shape of your choice when the Y button
-    # is pressed
+
+    if rc.controller.was_pressed(rc.controller.Button.Y):
+        rc.drive.set_speed_angle(speed, angle)
 
 def drive_circle():
     global queue
@@ -93,6 +110,20 @@ def drive_circle():
     queue.append([CIRCLE_TIME, 1, 1])
     queue.append([BRAKE_TIME, -1, 1])
 
+def drive_square():
+    global queue
+
+    SQUARE_TIME = 2
+    BRAKE_TIME = 0.5
+    TURN_TIME = 0.5
+
+    queue.clear()
+    for x in range(4):
+        queue.append([SQUARE_TIME, 0.5, 0])
+        queue.append([BRAKE_TIME, -1, 1])
+        queue.append([TURN_TIME, 1, 1])
+    
+    
 ########################################################################################
 # DO NOT MODIFY: Register start and update and begin execution
 ########################################################################################
