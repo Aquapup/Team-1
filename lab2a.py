@@ -25,16 +25,17 @@ rc = racecar_core.create_racecar()
 
 # >> Constants
 # The smallest contour we will recognize as a valid contour
-MIN_CONTOUR_AREA = 30
+MIN_CONTOUR_AREA = 29
 
 # A crop window for the floor directly in front of the car
 CROP_FLOOR = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 
 # Colors, stored as a pair (hsv_min, hsv_max)
-BLUE = ((90, 50, 50), (120, 255, 255))  # The HSV range for the color blue
+BLUE = ((175, 50, 50), (350, 255, 255))  # The HSV range for the color blue
 # TODO (challenge 1): add HSV ranges for other colors
-RED = ((0,50,180),(20,255,255))
-GREEN = ((40,50,200),(80,255,255))
+RED = ((0,50,150),(160,230,230))
+GREEN = ((60, 140, 60),(120, 255, 255))
+
 # >> Variables
 speed = 0.0  # The current speed of the car
 angle = 0.0  # The current angle of the car's wheels
@@ -55,41 +56,60 @@ def update_contour():
     global contour_area
 
     image = rc.camera.get_color_image()
-    #show_image(image)
+    #print("image: " + str(image))
+    print(type(image))
+    #rc.display.show_color_image(image)
 
     if image is None:
         contour_center = None
         contour_area = 0
+        print("image is none")
     else:
         # TODO (challenge 1): Search for multiple tape colors with a priority order
         # (currently we only search for blue)
 
         # Crop the image to the floor directly in front of the car
-        image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+        #image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+        #image = image[100:320,::]
+        if rc.camera.get_width() == 0:
+            print("FAIL!")
+        else:
+            rc.display.show_color_image(image)
         # Find all of the blue contours
+        print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
         contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
-        
+       
         
         print("found green")
         print("contours: " + str(contours))
-        if (contours == None).any():
-            print("found blue")
+
+        if (np.size(contours)==0 ):
+
             print("contours: " + str(contours))
             contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
-            if (contours == None).any():
+            print("contours: " + str(contours))
+            if(contours.all()!=None):
+                print("found blue")
+       #     print(contours)
+            if (contours.all() == None):
                 print("found red")
                 print("contours: " + str(contours))
                 contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
         # Select the largest contour
-        contour = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
-
-        if contour is not None:
+        print("final counter",contours)
+        print(np.shape(contours))
+        #contour = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
+        #check if image is None
+        #print(contour_center)
+        print("contour:",contours)
+        if contours is not None:
             # Calculate contour information
-            contour_center = rc_utils.get_contour_center(contour)
-            contour_area = rc_utils.get_contour_area(contour)
-
+            contour_center = rc_utils.get_contour_center(contours)
+            contour_area = rc_utils.get_contour_area(contours)
+            print(contour_center)
             # Draw contour onto the image
-            rc_utils.draw_contour(image, contour)
+            rc_utils.draw_contour(image, contours)
+            rc.display.show_color_image(image)
             rc_utils.draw_circle(image, contour_center)
 
         else:
@@ -129,6 +149,8 @@ def start():
         "    B button = print contour center and area"
     )
 
+    
+
 
 def update():
     """
@@ -143,15 +165,22 @@ def update():
     update_contour()
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
+    print(contour_center)
     if contour_center is not None:
         # Current implementation: bang-bang control (very choppy)
         # TODO (warmup): Implement a smoother way to follow the line
-        Kp = 0.6
-        angle = Kp*(contour_center[1]-(rc.camera.get_width()/2))
+        Kp = 0.4
+        angle = Kp*(contour_center[1]-(rc.camera.get_width()))
+        #angle = (contour_center[1])
+        print(contour_center[1])
         new_max = 1
         new_min = -1
         #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
-        angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), new_min, new_max)
+        print("old angle: " + str(angle))
+       # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), new_min, new_max)
+        # angle = rc_utils.remap_range(angle, -rc.camera.get_width()/2, rc.camera.get_width()/2, new_min, new_max)
+        angle = rc_utils.remap_range(contour_center[1], 0, rc.camera.get_width(), -1, 1)
+        print("new:",angle)
         # if contour_center[1] < (rc.camera.get_width()/ 2):
         #     angle = Kp*abs(contour_center[1]-rc.camera.get_width())
         # else:
@@ -160,9 +189,10 @@ def update():
     # Use the triggers to control the car's speed
     # forwardSpeed = rc.controller.get_trigger(rc.controller.Trigger.RIGHT)
     # backSpeed = rc.controller.get_trigger(rc.controller.Trigger.LEFT)
-    forwardSpeed = rc.controller.is_down(rc.controller.Button.RIGHT)
-    backSpeed = rc.controller.is_down(rc.controller.Button.LEFT)
-    speed = forwardSpeed - backSpeed
+    # # #forwardSpeed = rc.controller.is_down(rc.controller.)
+    # # #backSpeed = rc.controller.is_down(rc.controller.Button.B)
+    # speed = forwardSpeed - backSpeed
+    speed = 0.15 
 
     rc.drive.set_speed_angle(speed, angle)
 
