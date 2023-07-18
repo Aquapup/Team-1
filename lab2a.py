@@ -16,6 +16,18 @@ import numpy as np
 sys.path.insert(1, "../../library")
 import racecar_core
 import racecar_utils as rc_utils
+import enum 
+
+sys.path.insert(1, "../../library")
+import racecar_core
+import racecar_utils as rc_utils
+from enum import Enum
+
+class State(Enum):
+    line_follow = 0
+    stop = 1
+
+cur_state: State = State.line_follow
 
 ########################################################################################
 # Global variables
@@ -35,12 +47,16 @@ BLUE = ((175, 50, 50), (350, 255, 255))  # The HSV range for the color blue
 # TODO (challenge 1): add HSV ranges for other colors
 RED = ((135,100,170),(320,255,255))
 GREEN = ((90, 180, 50),(360, 245, 245))
+PURPLE = ((130, 140, 140), (2170, 255, 255))
+
 
 # >> Variables
 speed = 0.0  # The current speed of the car
 angle = 0.0  # The current angle of the car's wheels
 contour_center = None  # The (pixel row, pixel column) of contour
 contour_area = 0  # The area of contour
+purple_contour = 0
+
 
 ########################################################################################
 # Functions
@@ -54,6 +70,7 @@ def update_contour():
     """
     global contour_center
     global contour_area
+    global purple_contour
 
     image = rc.camera.get_color_image()
     #print("image: " + str(image))
@@ -102,10 +119,12 @@ def update_contour():
         #check if image is None
         #print(contour_center)
        # print("contour:",contours)
+        purple_contour = rc_utils.get_largest_contour(rc_utils.find_contours(image, PURPLE[0], PURPLE[1]),30)
         if contours is not None:
             # Calculate contour information
             contour_center = rc_utils.get_contour_center(contours)
             contour_area = rc_utils.get_contour_area(contours)
+            purple_contour = rc_utils.get_contour_area(purple_contour)
            # print("contour center: " + str(contour_center))
             # Draw contour onto the image
             rc_utils.draw_contour(image, contours)
@@ -126,10 +145,17 @@ def start():
     """
     global speed
     global angle
-
+    global cur_state
+    global cone_identified
+    global contour_area
+    global purple_contour
     # Initialize variables
     speed = 0
     angle = 0
+    cur_state = State.line_follow
+    cone_identified = False
+    contour_area = 0 
+    purple_contour = 0
 
     print("starting program")
     # Set initial driving speed and angle
@@ -161,11 +187,18 @@ def update():
     global angle
     global Kp
     global contour_center
+    global cur_state
+    global cone_identified
+    global contour_area
+    global purple_contour
    # print("in update")
     # Search for contours in the current color image
     update_contour()
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
+    contour = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+    if purple_contour > 301:
+        cone_identified = True
     print(contour_center)
     if contour_center is not None:
         # Current implementation: bang-bang control (very choppy)
@@ -197,6 +230,13 @@ def update():
     # speed = forwardSpeed - backSpeed
     speed = 0.2
 
+    if cur_state == 0:
+        if cone_identified:
+            cur_state = State.stop
+    else:
+        speed = 0
+        angle = 0
+        rc.drive.stop
     rc.drive.set_speed_angle(speed, angle)
 
     # Print the current speed and angle when the A button is held down
