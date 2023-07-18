@@ -33,8 +33,8 @@ CROP_FLOOR = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
 # Colors, stored as a pair (hsv_min, hsv_max)
 BLUE = ((175, 50, 50), (350, 255, 255))  # The HSV range for the color blue
 # TODO (challenge 1): add HSV ranges for other colors
-RED = ((0,50,150),(160,230,230))
-GREEN = ((60, 140, 60),(120, 255, 255))
+RED = ((135,100,170),(320,255,255))
+GREEN = ((90, 180, 50),(360, 245, 245))
 
 # >> Variables
 speed = 0.0  # The current speed of the car
@@ -57,7 +57,7 @@ def update_contour():
 
     image = rc.camera.get_color_image()
     #print("image: " + str(image))
-    print(type(image))
+    #print(type(image))
     #rc.display.show_color_image(image)
 
     if image is None:
@@ -76,37 +76,37 @@ def update_contour():
         else:
             rc.display.show_color_image(image)
         # Find all of the blue contours
-        print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
+       # print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
         contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
        
         
-        print("found green")
-        print("contours: " + str(contours))
+       # print("found green")
+        #print("contours: " + str(contours))
 
         if (np.size(contours)==0 ):
 
-            print("contours: " + str(contours))
+           # print("contours: " + str(contours))
             contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
-            print("contours: " + str(contours))
-            if(contours.all()!=None):
-                print("found blue")
+            #print("contours: " + str(contours))
+          #  if(contours.all()!=None):
+           #     print("found blue")
        #     print(contours)
             if (contours.all() == None):
-                print("found red")
-                print("contours: " + str(contours))
+             #   print("found red")
+                #print("contours: " + str(contours))
                 contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
         # Select the largest contour
-        print("final counter",contours)
-        print(np.shape(contours))
+        #print("final counter",contours)
+       # print(np.shape(contours))
         #contour = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
         #check if image is None
         #print(contour_center)
-        print("contour:",contours)
+       # print("contour:",contours)
         if contours is not None:
             # Calculate contour information
             contour_center = rc_utils.get_contour_center(contours)
             contour_area = rc_utils.get_contour_area(contours)
-            print(contour_center)
+           # print("contour center: " + str(contour_center))
             # Draw contour onto the image
             rc_utils.draw_contour(image, contours)
             rc.display.show_color_image(image)
@@ -160,7 +160,8 @@ def update():
     global speed
     global angle
     global Kp
-    print("in update")
+    global contour_center
+   # print("in update")
     # Search for contours in the current color image
     update_contour()
     # Choose an angle based on contour_center
@@ -169,17 +170,19 @@ def update():
     if contour_center is not None:
         # Current implementation: bang-bang control (very choppy)
         # TODO (warmup): Implement a smoother way to follow the line
-        Kp = 0.4
-        angle = Kp*(contour_center[1]-(rc.camera.get_width()))
+        
+        # Kp = 0.4
+        # angle = Kp*(contour_center[1]-(rc.camera.get_width()))
         #angle = (contour_center[1])
         print(contour_center[1])
         new_max = 1
         new_min = -1
         #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
-        print("old angle: " + str(angle))
+       # print("old angle: " + str(angle))
        # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), new_min, new_max)
         # angle = rc_utils.remap_range(angle, -rc.camera.get_width()/2, rc.camera.get_width()/2, new_min, new_max)
-        angle = rc_utils.remap_range(contour_center[1], 0, rc.camera.get_width(), -1, 1)
+        angle = ((contour_center[1]/320)*2-1)
+        #angle = rc_utils.remap_range(contour_center[1], 0, rc.camera.get_width(), -1, 1)
         print("new:",angle)
         # if contour_center[1] < (rc.camera.get_width()/ 2):
         #     angle = Kp*abs(contour_center[1]-rc.camera.get_width())
@@ -192,7 +195,7 @@ def update():
     # # #forwardSpeed = rc.controller.is_down(rc.controller.)
     # # #backSpeed = rc.controller.is_down(rc.controller.Button.B)
     # speed = forwardSpeed - backSpeed
-    speed = 0.15 
+    speed = 0.2
 
     rc.drive.set_speed_angle(speed, angle)
 
