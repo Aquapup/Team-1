@@ -74,7 +74,7 @@ def update():
     # Allow the user to override safety stop by holding the right bumper.
 
 
-    def get_closest_pixel(depth_image: NDArray[(Any, Any), np.float32], kernel_size: int = 5) -> NDArray[(Any, ...), Any]:
+    def get_closest_pixel(depth_image: NDArray[(Any, Any), np.float32], kernel_size: int = 1) -> NDArray[(Any, ...), Any]:
     
         depth_image = (depth_image - 0.01) % 10000
         depth_image = cv.GaussianBlur(depth_image, (kernel_size, kernel_size), 0)
@@ -95,7 +95,7 @@ def update():
     cropped_image = crop(depth_image, top_left_inclusive, bottom_right_exclusive)
     row = get_closest_pixel(cropped_image)[0]
     col = get_closest_pixel(cropped_image)[1]
-    if depth_image[row][col] < 20:
+    if depth_image[row][col] < 30:
         rc.drive.stop()
 
 
