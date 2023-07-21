@@ -16,14 +16,17 @@ import numpy as np
 sys.path.insert(1, "../../library")
 import racecar_core
 import racecar_utils as rc_utils
+import enum
 from enum import Enum
 
 class State(Enum):
-    straight = 0
-    cone = 1
-    stop = 2
+    line_follow=0
+    slalom=1
+    parking=2
 
-cur_state: State = State.straight
+cur_state: State = State.line_follow
+
+
 counter=0
 rcontour_area=0
 blue2red2 =0
@@ -51,8 +54,8 @@ BLUE = ((100, 100, 100), (150, 255, 255))  # The HSV range for the color blue
 RED = ((160,50,50),(179,255,255))
 GREEN = ((90, 180, 50),(360, 245, 245))
 PURPLE = ((130, 140, 140), (217, 255, 255))
-
-
+ORANGE= ((0,50,50),(50,255,255))
+#LIGHTPURPLE((130,),())
 # >> Variables
 speed = 0.0  # The current speed of the car
 angle = 0.0  # The current angle of the car's wheels
@@ -66,7 +69,7 @@ blue1red0= 0
 ########################################################################################
 
 
-def update_contour():
+def slalom():
     """
     Finds contours in the current color image and uses them to update contour_center
     and contour_area
@@ -296,14 +299,85 @@ def update_contour():
 
         except Exception as e:
             print(f"Error: {e}")  
+
+###########################################################################################################################################
+#                               UPDATE CONTOUR                                                                                            #
+###########################################################################################################################################
+def update_contour():
+    global contour_center
+    global contour_area
+
+    image = rc.camera.get_color_image()
+    #print("image: " + str(image))
+#  print(type(image))
+    #rc.display.show_color_image(image)
+
+    if image is None:
+        contour_center = None
+        contour_area = 0
+        print("image is none")
+    else:
+        # TODO (challenge 1): Search for multiple tape colors with a priority order
+        # (currently we only search for blue)
+
+        # Crop the image to the floor directly in front of the car
+        #image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+        #image = image[100:320,::]
+        if rc.camera.get_width() == 0:
+            print("FAIL!")
+        else:
+            rc.display.show_color_image(image)
+        # Find all of the blue contours
+    # print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
+        contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
+    
         
-       # print("found green")
-        #print("contours: " + str(contours))
+        #print("found green")
+    # print("contours: " + str(contours))
+
+        if (np.size(contours)==0 ):
+
+            #print("contours: " + str(contours))
+            contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
+        #   print("contours: " + str(contours))
+            #if(contours.all()!=None):
+        #     print("found blue")
     #     print(contours)
-    #     if (np.size(contours)==0 or rc_utils.get_contour_area(contours)<=1000):
-    #         rc.drive.set_speed_angle(1,0)
-    #        # print("contours: " + str(contours))
-    #         contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
+            if (contours.all() == None):
+            #    print("found red")
+        #      print("contours: " + str(contours))
+                contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+        # Select the largest contour
+    #  print("final counter",contours)
+    # print(np.shape(contours))
+        #contour = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
+        #check if image is None
+        #print(contour_center)
+    #   print("contour:",contours)
+        if contours is not None:
+            # Calculate contour information
+            contour_center = rc_utils.get_contour_center(contours)
+            contour_area = rc_utils.get_contour_area(contours)
+    #     print(contour_center)
+            # Draw contour onto the image
+            rc_utils.draw_contour(image, contours)
+            rc.display.show_color_image(image)
+            rc_utils.draw_circle(image, contour_center)
+
+        else:
+            contour_center = None
+            contour_area = 0
+
+        # Display the image to the screen
+        rc.display.show_color_image(image)
+    
+        # print("found green")
+            #print("contours: " + str(contours))
+        #     print(contours)
+        #     if (np.size(contours)==0 or rc_utils.get_contour_area(contours)<=1000):
+        #         rc.drive.set_speed_angle(1,0)
+        #        # print("contours: " + str(contours))
+        #         contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
     #         #print("contours: " + str(contours))
     #       #  if(contours.all()!=None):
     #        #     print("found blue")
@@ -370,7 +444,64 @@ def update_contour():
         # Display the image to the screen
         # rc.display.show_color_image(image)
 
+def line_follow():
+    global speed
+    global angle
+    global Kp
+    global contour_center
+   # print("in update")
+    # Search for contours in the current color image
+    update_contour()
+    # Choose an angle based on contour_center
+    # If we could not find a contour, keep the previous angle
+   # print(contour_center)
+    if contour_center is not None:
+        # Current implementation: bang-bang control (very choppy)
+        # TODO (warmup): Implement a smoother way to follow the line
+        #Kp = 0.4
+        #angle = Kp*(contour_center[1]-(rc.camera.get_width()))
+        #angle = (contour_center[1])
+        print(contour_center[1])
+        new_max = 1
+        new_min = -1
+        print("-" * 32 + " : area = " + str(contour_area))
+        #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
+       # print("old angle: " + str(angle))
+       # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), new_min, new_max)
+        # angle = rc_utils.remap_range(angle, -rc.camera.get_width()/2, rc.camera.get_width()/2, new_min, new_max)
+        angle = rc_utils.remap_range(contour_center[1], 0,320, -1, 1)
+        #angle = ((contour_center[1] / 320) * 2 - 1)
 
+        print("new:",angle)
+        # if contour_center[1] < (rc.camera.get_width()/ 2):
+        #     angle = Kp*abs(contour_center[1]-rc.camera.get_width())
+        # else:
+        #     angle = 1
+
+    # Use the triggers to control the car's speed
+    # forwardSpeed = rc.controller.get_trigger(rc.controller.Trigger.RIGHT)
+    # backSpeed = rc.controller.get_trigger(rc.controller.Trigger.LEFT)
+    # # #forwardSpeed = rc.controller.is_down(rc.controller.)
+    # # #backSpeed = rc.controller.is_down(rc.controller.Button.B)
+    # speed = forwardSpeed - backSpeed
+    speed = 0.15 
+
+    rc.drive.set_speed_angle(speed, angle)
+
+    # Print the current speed and angle when the A button is held down
+    if rc.controller.is_down(rc.controller.Button.A):
+        print("Speed:", speed, "Angle:", angle)
+
+    # Print the center and area of the largest contour when B is held down
+    if rc.controller.is_down(rc.controller.Button.B):
+        if contour_center is None:
+            print("No contour found")
+        else:
+            print("Center:", contour_center, "Area:", contour_area)
+    if rc.controller.was_pressed(rc.controller.Button.X):
+        rc.drive.stop()
+def cone_parking():
+    pass
 def start():
     """
     This function is run once every time the start button is pressed
@@ -421,9 +552,20 @@ def update():
     global cone_identified
     global contour_area
     global purple_contour
+    global red1_contour
    # print("in update")
     # Search for contours in the current color image
     update_contour()
+    purple_contour=rc_utils.get_largest_contour(rc_utils.find_contours(image, PURPLE[0], PURPLE[1]),30)
+    if(purple_contour is not None):
+        cur_state= 1 
+        slalom()
+        red1_contour=rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+        red1_area= rc_utils.get_contour_area(red1_contour)
+        if(red1_area>6000):
+            rc.drive.stop()
+    else:
+        cur_state=0
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
     #contour = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
