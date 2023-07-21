@@ -16,18 +16,6 @@ import numpy as np
 sys.path.insert(1, "../../library")
 import racecar_core
 import racecar_utils as rc_utils
-import enum 
-
-sys.path.insert(1, "../../library")
-import racecar_core
-import racecar_utils as rc_utils
-from enum import Enum
-
-class State(Enum):
-    line_follow = 0
-    stop = 1
-
-cur_state: State = State.line_follow
 
 ########################################################################################
 # Global variables
@@ -40,24 +28,27 @@ rc = racecar_core.create_racecar()
 MIN_CONTOUR_AREA = 29
 
 # A crop window for the floor directly in front of the car
-CROP_FLOOR = ((180, 0), (rc.camera.get_height(), rc.camera.get_width()))
-
+CROP_FLOOR = ((60, 0), (rc.camera.get_height(), rc.camera.get_width()))
+CROP_ROOF = ((90, 0), (rc.camera.get_height(), rc.camera.get_width()))
 # Colors, stored as a pair (hsv_min, hsv_max)
-BLUE = ((175, 50, 50), (350, 255, 255))  # The HSV range for the color blue
+#BLUE = ((100, 0, 100), (150, 255, 170))  # The HSV range for the color blue
+BLUE = ((90,50,50),(120,255,255))
 # TODO (challenge 1): add HSV ranges for other colors
-RED = ((135,100,170),(320,255,255))
-GREEN = ((90, 180, 50),(360, 245, 245))
-PURPLE = ((130, 140, 140), (2170, 255, 255))
-
+RED = ((160,180,150),(0,255,255)) 
+PINK = ((130,0,0),(180,255,150))
+GREEN = ((40,120,120),(100,255,255))
+YELLOW = ((20,50,70), (32,240,255))
+#YELLOW = ((20,50,50), (32,255,255))
+#GREEN = ((40, 180, 140),(100, 255, 255))
 
 # >> Variables
 speed = 0.0  # The current speed of the car
+lasterr=0
 angle = 0.0  # The current angle of the car's wheels
 contour_center = None  # The (pixel row, pixel column) of contour
 contour_area = 0  # The area of contour
-purple_contour = 0
-
-
+pangle=0
+dangle=0
 ########################################################################################
 # Functions
 ########################################################################################
@@ -70,13 +61,14 @@ def update_contour():
     """
     global contour_center
     global contour_area
-    global purple_contour
 
     image = rc.camera.get_color_image()
     #print("image: " + str(image))
     #print(type(image))
     #rc.display.show_color_image(image)
-
+    # threshold = 50
+    # if rc_utils.get_contour_area(contours) < threshold: 
+    #         contours = None 
     if image is None:
         contour_center = None
         contour_area = 0
@@ -86,7 +78,8 @@ def update_contour():
         # (currently we only search for blue)
 
         # Crop the image to the floor directly in front of the car
-        #image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+        image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+        image = rc_utils.crop(image, CROP_ROOF[0], CROP_ROOF[1])
         #image = image[100:320,::]
         if rc.camera.get_width() == 0:
             print("FAIL!")
@@ -94,16 +87,23 @@ def update_contour():
             rc.display.show_color_image(image)
         # Find all of the blue contours
        # print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
-        contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
-       
+        # if(np.size(rc_utils.find_contours(image, RED[0], RED[1]))!=0):
+        #     contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+        # else:
         
        # print("found green")
         #print("contours: " + str(contours))
-
+         
+        contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, YELLOW[0], YELLOW[1]),30)
+        
+        print("found yellow")
         if (np.size(contours)==0 ):
 
            # print("contours: " + str(contours))
-            contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),30)
+            
+            contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
+            # if rc_utils.get_contour_area(contours) < threshold: 
+            #     contours = None 
             #print("contours: " + str(contours))
           #  if(contours.all()!=None):
            #     print("found blue")
@@ -111,7 +111,13 @@ def update_contour():
             if (contours.all() == None):
              #   print("found red")
                 #print("contours: " + str(contours))
-                contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+                contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),30)
+                # if rc_utils.get_contour_area(contours) < threshold: 
+                #     contours = None 
+            if(contours.all()==None):
+                contours= rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+                # if rc_utils.get_contour_area(contours) < threshold: 
+                #     contours = None 
         # Select the largest contour
         #print("final counter",contours)
        # print(np.shape(contours))
@@ -119,12 +125,10 @@ def update_contour():
         #check if image is None
         #print(contour_center)
        # print("contour:",contours)
-        purple_contour = rc_utils.get_largest_contour(rc_utils.find_contours(image, PURPLE[0], PURPLE[1]),30)
         if contours is not None:
             # Calculate contour information
             contour_center = rc_utils.get_contour_center(contours)
             contour_area = rc_utils.get_contour_area(contours)
-            purple_contour = rc_utils.get_contour_area(purple_contour)
            # print("contour center: " + str(contour_center))
             # Draw contour onto the image
             rc_utils.draw_contour(image, contours)
@@ -145,17 +149,10 @@ def start():
     """
     global speed
     global angle
-    global cur_state
-    global cone_identified
-    global contour_area
-    global purple_contour
+
     # Initialize variables
     speed = 0
     angle = 0
-    cur_state = State.line_follow
-    cone_identified = False
-    contour_area = 0 
-    purple_contour = 0
 
     print("starting program")
     # Set initial driving speed and angle
@@ -176,7 +173,14 @@ def start():
     )
 
     
+def clamp(value: float, vmin: float, vmax: float) -> float:
 
+    if value < vmin:
+        return vmin
+    elif value > vmax:
+        return vmax
+    else:
+        return value
 
 def update():
     """
@@ -186,37 +190,61 @@ def update():
     global speed
     global angle
     global Kp
+    global Kd
     global contour_center
-    global cur_state
-    global cone_identified
-    global contour_area
-    global purple_contour
+    global pangle
+    global dangle
+    global lasterr
    # print("in update")
     # Search for contours in the current color image
     update_contour()
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
-    contour = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
-    if purple_contour > 301:
-        cone_identified = True
     print(contour_center)
+    
     if contour_center is not None:
         # Current implementation: bang-bang control (very choppy)
         # TODO (warmup): Implement a smoother way to follow the line
         
-        # Kp = 0.4
-        # angle = Kp*(contour_center[1]-(rc.camera.get_width()))
-        #angle = (contour_center[1])
-        print(contour_center[1])
-        new_max = 1
-        new_min = -1
+        Kp =0.6
+        Kd= 0.2
+        setpoint = rc.camera.get_width()/2
+        #angle = Kp*(contour_center[1]-(setpoint)) #tried
+        #pangle=((angle/320)*2-1)
+        # dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
+        # lasterr=(contour_center[1])
+        # angle=pangle+dangle*rc.get_delta_time()
+        #angle = (contour_center[1]) #tried
+        # print("contour center",contour_center[1])
+        # print(rc.camera.get_width())
+        # new_max = 1
+        # new_min = -1
+        # print("pangle: " + str(pangle))
+        # print("dangle: " + str(dangle)) 
         #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
        # print("old angle: " + str(angle))
-       # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), new_min, new_max)
-        # angle = rc_utils.remap_range(angle, -rc.camera.get_width()/2, rc.camera.get_width()/2, new_min, new_max)
-        angle = ((contour_center[1]/320)*2-1)
+        #angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
+        #angle = rc_utils.remap_range(angle,  Kp*-setpoint, Kp*setpoint, -1, 1)
+        # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
+        pangle = ((contour_center[1]/320)*2-1)
+        # dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
+        # lasterr=(contour_center[1])
+        # angle=(pangle+dangle)*rc.get_delta_time()
+        # print("first angle: ", angle)
+        # angle = clamp(angle, 0, rc.camera.get_width())
+        # print("angle after clamping: ", angle)
+        # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
+        angle = Kp*pangle
+        #angle -=1
+        print("final angle: ", angle)
+        # if angle < -1:
+        #     angle = -1
+        # elif angle > 1:
+        #     angle = 1
+   
+        # lasterr=(contour_center[1])
+        # angle=pangle+dangle*rc.get_delta_time()
         #angle = rc_utils.remap_range(contour_center[1], 0, rc.camera.get_width(), -1, 1)
-        print("new:",angle)
         # if contour_center[1] < (rc.camera.get_width()/ 2):
         #     angle = Kp*abs(contour_center[1]-rc.camera.get_width())
         # else:
@@ -228,15 +256,8 @@ def update():
     # # #forwardSpeed = rc.controller.is_down(rc.controller.)
     # # #backSpeed = rc.controller.is_down(rc.controller.Button.B)
     # speed = forwardSpeed - backSpeed
-    speed = 0.2
+    speed = 0.145
 
-    if cur_state == 0:
-        if cone_identified:
-            cur_state = State.stop
-    else:
-        speed = 0
-        angle = 0
-        rc.drive.stop
     rc.drive.set_speed_angle(speed, angle)
 
     # Print the current speed and angle when the A button is held down
