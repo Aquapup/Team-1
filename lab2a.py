@@ -256,7 +256,7 @@ def update():
     # # #forwardSpeed = rc.controller.is_down(rc.controller.)
     # # #backSpeed = rc.controller.is_down(rc.controller.Button.B)
     # speed = forwardSpeed - backSpeed
-    speed = 0.145
+    speed = 0.15
 
     rc.drive.set_speed_angle(speed, angle)
 
