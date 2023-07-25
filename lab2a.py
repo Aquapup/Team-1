@@ -206,7 +206,7 @@ def update():
         # Current implementation: bang-bang control (very choppy)
         # TODO (warmup): Implement a smoother way to follow the line
         
-        Kp =0.6
+        Kp =0.5
         Kd= 0.2
         setpoint = rc.camera.get_width()/2
         #angle = Kp*(contour_center[1]-(setpoint)) #tried
@@ -227,6 +227,7 @@ def update():
         #angle = rc_utils.remap_range(angle,  Kp*-setpoint, Kp*setpoint, -1, 1)
         # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
         pangle = ((contour_center[1]/320)*2-1)
+        angle=clamp(Kp*pangle,-1,1)
         # dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
         # lasterr=(contour_center[1])
         # angle=(pangle+dangle)*rc.get_delta_time()
@@ -235,6 +236,7 @@ def update():
         # print("angle after clamping: ", angle)
         # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
         angle = Kp*pangle
+        #angle=clamp(angle,0,1)
         #angle -=1
         print("final angle: ", angle)
         # if angle < -1:
