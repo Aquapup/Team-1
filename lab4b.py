@@ -24,21 +24,29 @@ from nptyping import NDArray
 
 rc = racecar_core.create_racecar()
 distance=0
-scan=np.array()
+scan=[]
+scan=np.array(scan)
 # Add any global variables here
 
 ########################################################################################
 # Functions
 ########################################################################################
 
+def clamp(value: float, vmin: float, vmax: float) -> float:
 
+    if value < vmin:
+        return vmin
+    elif value > vmax:
+        return vmax
+    else:
+        return value
 def start():
     """
     This function is run once every time the start button is pressed
     """
     # Have the car begin at a stop
     rc.drive.stop()
-    distance =rc_utils.get_lidar_average_distance(scan, 180)
+    #distance =rc_utils.get_lidar_average_distance(scan, 180)
     # Print start message
     print(">> Lab 4B - LIDAR Wall Following")
 
@@ -96,17 +104,32 @@ def update():
     global angle
     global scan
     # TODO: Follow the wall to the right of the car without hitting anything.
+    #scan=[]
     scan= rc.lidar.get_samples()
+ #   scan=np.array(scan)
     # TBD=0
-    print(distance)
-    if(rc_utils.get_lidar_average_distance(scan, 180,20) == distance):
-        angle= 0
-    else:
-        angle=scan[0]
-        distance = rc_utils.get_lidar_average_distance(scan,180,20)
+    #print(distance)
+    # if(rc_utils.get_lidar_average_distance(scan, 180,20) == distance):
+    # if(np.argmin(scan))
+    #     angle= 0
+    # else:
+    ### ONE SIDE OF WALL
+    Kp=5
+    angle=np.argmin(scan[0:359])/2-90
+    # print("angle b4 clamp",np.argmin(scan[0:359]))
+    # angle/=90
+# if front too close, turn
+
+    #angle=np.argmax(np.concatenate((scan[540:719],scan[0:179])))/2 -90
+    print('old angle',angle)
+    angle/=90
+    angle*=Kp
+    angle=clamp(angle,-1,1)
+    print(angle)
+    # distance = rc_utils.get_lidar_average_distance(scan,180,20)
     
 
-    rc.drive.set_speed_angle(1,angle)
+    rc.drive.set_speed_angle(0.2,angle)
 
 
     # p= scan
