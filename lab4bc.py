@@ -121,18 +121,17 @@ def update():
     #     angle= 0
     # else:
     ### ONE SIDE OF WALL
-    Kp=2
-    Kd=0
-    #dset=50
-    dset= 15
-    sharp_front_distance=100
-    straight_speed=0.13
-    turn_speed =0.1
+    Kp=0.1
+    Kd=0.3
+    dset=40
+    sharp_front_distance=125
+    straight_speed=0.165
+    turn_speed =0.183
     #remapvalue=150- dset
-    remapvalue= 20-dset
+    remapvalue= dset
     max_dis_gap=150
-    rightdist= rc_utils.get_lidar_average_distance(scan,90, 10)
-    frontdist = rc_utils.get_lidar_average_distance(scan,0, 10)
+    rightdist= rc_utils.get_lidar_average_distance(scan,90, 40)
+    frontdist = rc_utils.get_lidar_average_distance(scan,0, 40)
     print('right distance',rightdist)
     print('front distance',frontdist)
     sharp=False
@@ -163,15 +162,16 @@ def update():
 
     #angle=np.argmax(np.concatenate((scan[540:719],scan[0:179])))/2 -90
     if(not sharp):
-        angle= Kp* (rightdist- dset)+Kd*(rightdist-lastd)
+        angle= Kp * (rightdist - dset)+Kd*(rightdist-lastd)
         lastd= rightdist
         #np.argmin(scan[0:359])/2-90
+        angle/=remapvalue
         print('old angle',angle)
 #        angle/=90
 
-        angle/=remapvalue
+
         angle=clamp(angle,-1,1)
-        print(angle)
+        print('new angle:',angle)
     # distance = rc_utils.get_lidar_average_distance(scan,180,20)
     
 
