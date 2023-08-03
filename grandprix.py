@@ -21,12 +21,12 @@ from enum import Enum
 
 class State(Enum):
     overpass = 1
-    graveyardLineFollow = 2 
+    graveyardLineFollow = 2
     canyonMazeWall = 3
     goFast = 4
     slalom = 5
-    rampLane = 6 
-    hazardWall = 7 
+    rampLane = 6
+    hazardWall = 7
     brickWall = 8
 
     # line_follow=0
@@ -37,12 +37,12 @@ class State(Enum):
 
 
 cur_state: State = State.line_follow
-#variables 
-global counter 
-counter = 0 
+#variables
+global counter
+counter = 0
 global rcontour_area
 rcotour_area=0
-global blue2red2 
+global blue2red2
 blue2red2 =0
 global blue3red3
 blue3red3 =0
@@ -68,7 +68,7 @@ ORANGE= ((0,209,220),(28,255,255))
 # YELLOW = (())
 BLUE = ((90, 90, 140),(95, 255, 255))
 # TODO (challenge 1): add HSV ranges for other colors
-RED = ((130,40,160),(179,255,255)) 
+RED = ((130,40,160),(179,255,255))
 # PINK = ((130,0,0),(180,255,150))
 # GREEN = ((40,100,120),(70,200,255))
 #GREEN = ((26,56,119),(81,130,213))
@@ -85,7 +85,7 @@ coneindex=0
 numscan=360
 lasterr=0
 
-#functions 
+#functions
 def clamp(value: float, vmin: float, vmax: float) -> float:
 
     if value < vmin:
@@ -102,7 +102,7 @@ def line_follow(speedVar = 0.15):
     global Kp
     global contour_center
     global lasterr
-    speed = speedVar 
+    speed = speedVar
    # print("in update")
     # Search for contours in the current color image
     update_contour()
@@ -129,7 +129,7 @@ def line_follow(speedVar = 0.15):
         # new_max = 1
         # new_min = -1
         # print("pangle: " + str(pangle))
-        # print("dangle: " + str(dangle)) 
+        # print("dangle: " + str(dangle))
         #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
        # print("old angle: " + str(angle))
         #rc_utils.get_lidar_average_distance(scan, 180,20) >= (leftDistance-2) and rc_utils.get_lidar_average_distance(scan, 180,20) <= (leftDistance+2)
@@ -168,8 +168,8 @@ def line_follow(speedVar = 0.15):
 def wall_follow(speedVar = 0.2):
     global angle
     global scan
-    global speed 
-    speed = speedVar 
+    global speed
+    speed = speedVar
     # TODO: Follow the wall to the right of the car without hitting anything.
     #scan=[]
     scan= rc.lidar.get_samples()
@@ -194,7 +194,7 @@ def wall_follow(speedVar = 0.2):
     angle=clamp(angle,-1,1)
     print(angle)
     # distance = rc_utils.get_lidar_average_distance(scan,180,20)
-    
+
 
     rc.drive.set_speed_angle(speed,angle)
 
@@ -222,9 +222,9 @@ def wall_follow(speedVar = 0.2):
     #     #  print(i+j)
     #         if not ((i+j)<0 or (i+j)>len(scan)-2):
     #             total=total+ d[i+j]*k[(j+(int)((m+1)/2))]
-        
 
-        
+
+
     #     if total>stdev:
     #         clusters[total]=[p[i]]
     #         C=total
@@ -233,87 +233,95 @@ def wall_follow(speedVar = 0.2):
     #     print(clusters)
 
 def safety_stop():
-    global counter 
-    global angle 
-    #counter = 0 
-    
+    global counter
+    global angle
+    #counter = 0
+
     """
     After start() is run, this function is run every frame until the back button
     is pressed
     """
     # Use the triggers to control the car's speed
     scan = rc.lidar.get_samples()
-    
+
     if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-        
+
         counter += rc.get_delta_time()
-        print("counter: " + str(counter)) 
-        if counter < 2: 
+        print("counter: " + str(counter))
+        if counter < 2:
             rc.drive.set_speed_angle(-1, angle)
             #rc.drive.set_speed_angle(-1, 0)
         else:
-            counter = 0 
+            counter = 0
             rc.drive.stop()
     else:
         rc.drive.set_speed_angle(1, 0)
 
     rc.display.show_lidar(scan)
 
-def lane_follow(speedVar = 0.2):
+def lane_follow(speedVar = 0.16):
     global speed
     global angle
     global Kp
     global contour_center
     global lasterr
-    speed = speedVar 
+    speed = speedVar
    # print("in update")
     # Search for contours in the current color image
     update_contour()
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
    # print(contour_center)
-    if contour_center is not None:
-        # Current implementation: bang-bang control (very choppy)
-        # TODO (warmup): Implement a smoother way to follow the line
-        #Kp = 0.4
-        #angle = Kp*(contour_center[1]-(rc.camera.get_width()))
-        #angle = (contour_center[1])
-        Kp =0.3
-        Kd= 0.2
-        setpoint = rc.camera.get_width()/2
-        #angle = Kp*(contour_center[1]-(setpoint)) #tried
-        #pangle=((angle/320)*2-1)
-        # dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
-        # lasterr=(contour_center[1])
-        # angle=pangle+dangle*rc.get_delta_time()
-        #angle = (contour_center[1]) #tried
-        # print("contour center",contour_center[1])
-        # print(rc.camera.get_width())
-        # new_max = 1
-        # new_min = -1
-        # print("pangle: " + str(pangle))
-        # print("dangle: " + str(dangle)) 
-        #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
-       # print("old angle: " + str(angle))
-        #rc_utils.get_lidar_average_distance(scan, 180,20) >= (leftDistance-2) and rc_utils.get_lidar_average_distance(scan, 180,20) <= (leftDistance+2)
-        #angle = rc_utils.remap_range(angle,  Kp*-setpoint, Kp*setpoint, -1, 1)
-        # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
-        pangle = ((contour_center[1]/160)*2-1)
-       #angle=clamp(Kp*pangle,-1,1)
-        dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
-        lasterr=(contour_center[1])
-        angle= (clamp(Kp*pangle+Kd*dangle,-1,1))
-        # print("first angle: ", angle)
-        # angle = clamp(angle, 0, rc.camera.get_width())
-        # print("angle after clamping: ", angle)
-        # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
-        #angle = Kp*pangle
-        #angle=clamp(angle,0,1)
-        #angle -=1
-        print("final angle: ", angle)
+     scan= rc.lidar.get_samples()
+     if(rc.get_lidar_average_distance(scan,0,20)):
+         rc.drive.set_speed_angle(0.3, 0)
+     else:
+
+        if contour_center is not None:
+            # Current implementation: bang-bang control (very choppy)
+            # TODO (warmup): Implement a smoother way to follow the line
+            #Kp = 0.4
+            #angle = Kp*(contour_center[1]-(rc.camera.get_width()))
+            #angle = (contour_center[1])
+            Kp =0.3
+            Kd= 0.2
+            setpoint = rc.camera.get_width()/2
+            #angle = Kp*(contour_center[1]-(setpoint)) #tried
+            #pangle=((angle/320)*2-1)
+            # dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
+            # lasterr=(contour_center[1])
+            # angle=pangle+dangle*rc.get_delta_time()
+            #angle = (contour_center[1]) #tried
+            # print("contour center",contour_center[1])
+            # print(rc.camera.get_width())
+            # new_max = 1
+            # new_min = -1
+            # print("pangle: " + str(pangle))
+            # print("dangle: " + str(dangle))
+            #angle = (angle/(old_max-old_min) * (new_max-new_min)+new_min)
+           # print("old angle: " + str(angle))
+            #rc_utils.get_lidar_average_distance(scan, 180,20) >= (leftDistance-2) and rc_utils.get_lidar_average_distance(scan, 180,20) <= (leftDistance+2)
+            #angle = rc_utils.remap_range(angle,  Kp*-setpoint, Kp*setpoint, -1, 1)
+            # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
+            pangle = ((contour_center[1]/160)*2-1)
+           #angle=clamp(Kp*pangle,-1,1)
+            dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
+            lasterr=(contour_center[1])
+            angle= (clamp(Kp*pangle+Kd*dangle,-1,1))
+            rc.drive.set_speed_angle(speed, angle)
+            # print("first angle: ", angle)
+            # angle = clamp(angle, 0, rc.camera.get_width())
+            # print("angle after clamping: ", angle)
+            # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
+            #angle = Kp*pangle
+            #angle=clamp(angle,0,1)
+            #angle -=1
+            print("final angle: ", angle)
+        else:
+             rc.drive.set_speed_angle(0.1,0)
     #speed = 1
 
-    rc.drive.set_speed_angle(speed, angle)
+
 
     # Print the current speed and angle when the A button is held down
     if rc.controller.is_down(rc.controller.Button.A):
@@ -343,8 +351,8 @@ def update_contour():
     #print(type(image))
     #rc.display.show_color_image(image)
     # threshold = 50
-    # if rc_utils.get_contour_area(contours) < threshold: 
-    #         contours = None 
+    # if rc_utils.get_contour_area(contours) < threshold:
+    #         contours = None
     if image is None:
         contour_center = None
         contour_area = 0
@@ -366,21 +374,21 @@ def update_contour():
         # if(np.size(rc_utils.find_contours(image, RED[0], RED[1]))!=0):
         #     contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
         # else:
-        
+
        # print("found green")
         #print("contours: " + str(contours))
-         
+
         contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, BLUE[0], BLUE[1]),50)
-        
+
         print(contours)
         #if (np.size(contours)==0 ):
         if (not (contours is not None)):
            # print("contours: " + str(contours))
-            
+
             contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),50)
             print("found red")
-            # if rc_utils.get_contour_area(contours) < threshold: 
-            #     contours = None 
+            # if rc_utils.get_contour_area(contours) < threshold:
+            #     contours = None
             #print("contours: " + str(contours))
           #  if(contours.all()!=None):
            #     print("found blue")
@@ -389,13 +397,13 @@ def update_contour():
              #   print("found red")
                 #print("contours: " + str(contours))
                 contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, GREEN[0], GREEN[1]),50)
-                # if rc_utils.get_contour_area(contours) < threshold: 
-                #     contours = None 
+                # if rc_utils.get_contour_area(contours) < threshold:
+                #     contours = None
                 print("found green")
             if(not (contours is not None)):
                 contours= rc_utils.get_largest_contour(rc_utils.find_contours(image, YELLOW[0], YELLOW[1]),50)
-                # if rc_utils.get_contour_area(contours) < threshold: 
-                #     contours = None 
+                # if rc_utils.get_contour_area(contours) < threshold:
+                #     contours = None
         # Select the largest contour
         #print("final counter",contours)
        # print(np.shape(contours))
@@ -419,7 +427,12 @@ def update_contour():
 
         # Display the image to the screen
         rc.display.show_color_image(image)
-
+def ramp():
+    scan= rc.lidar.get_samples()
+    if(rc.get_lidar_average_distance(scan,0,20)):
+        rc.drive.set_speed_angle(0.3, 0)
+    else:
+        rc.drive.set_speed_angle(0.1,0)
 def update():
     """
     After start() is run, this function is run every frame until the back button
@@ -441,9 +454,9 @@ def update():
 
 
 
-    
+
     global ar_markers
-    global angle 
+    global angle
     image = rc.camera.get_color_image()
     #slalom()
     markers = rc_utils.get_ar_markers(image)
@@ -453,21 +466,21 @@ def update():
         id = markers[0].get_id()
     else:
         id = 1000000
-    
+
     if id == 1:
         print("in overpass")
         cur_state = State.overpass
         scan = rc.lidar.get_samples()
-    
+
         if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
             counter += rc.get_delta_time()
-            #print("counter: " + str(counter)) 
-            if counter < 2: 
+            #print("counter: " + str(counter))
+            if counter < 2:
                 rc.drive.set_speed_angle(-1, angle)
                 #rc.drive.set_speed_angle(-1, 0)
             else:
-                counter = 0 
+                counter = 0
                 rc.drive.stop()
         else:
             wall_follow(0.3)
@@ -475,121 +488,121 @@ def update():
     #rc.display.show_lidar(scan)
         # wall_follow()
         # safety_stop()
-    elif id == 2: 
+    elif id == 2:
         print("in graveward")
         cur_state = State.graveyardLineFollow
         scan = rc.lidar.get_samples()
-    
+
         if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
             counter += rc.get_delta_time()
-            #print("counter: " + str(counter)) 
-            if counter < 2: 
+            #print("counter: " + str(counter))
+            if counter < 2:
                 rc.drive.set_speed_angle(-1, angle)
                 #rc.drive.set_speed_angle(-1, 0)
             else:
-                counter = 0 
+                counter = 0
                 rc.drive.stop()
         else:
             line_follow()
 
         #rc.display.show_lidar(scan)
-    elif id == 3: 
+    elif id == 3:
         print("in canyon maze")
         cur_state = State.canyonMazeWall
         # scan = rc.lidar.get_samples()
-        
+
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
         #     counter += rc.get_delta_time()
-        #     #print("counter: " + str(counter)) 
-        #     if counter < 2: 
+        #     #print("counter: " + str(counter))
+        #     if counter < 2:
         #         rc.drive.set_speed_angle(-1, angle)
         #         #rc.drive.set_speed_angle(-1, 0)
         #     else:
-        #         counter = 0 
+        #         counter = 0
         #         rc.drive.stop()
         # else:
         #     wall_follow()
 
         # rc.display.show_lidar(scan)
         wall_follow()
-    elif id == 4: 
+    elif id == 4:
         print("in go fast")
         cur_state = State.goFast
         # scan = rc.lidar.get_samples()
-    
+
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
         #     counter += rc.get_delta_time()
-        #     #print("counter: " + str(counter)) 
-        #     if counter < 2: 
+        #     #print("counter: " + str(counter))
+        #     if counter < 2:
         #         rc.drive.set_speed_angle(-1, angle)
         #         #rc.drive.set_speed_angle(-1, 0)
         #     else:
-        #         counter = 0 
+        #         counter = 0
         #         rc.drive.stop()
         # else:
         #     wall_follow(0.3)
 
         # rc.display.show_lidar(scan)
         wall_follow(0.3)
-    elif id == 5: 
+    elif id == 5:
         print("in cone slalom")
         cur_state = State.slalom
         # scan = rc.lidar.get_samples()
-    
+
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
         #     counter += rc.get_delta_time()
-        #     #print("counter: " + str(counter)) 
-        #     if counter < 2: 
+        #     #print("counter: " + str(counter))
+        #     if counter < 2:
         #         rc.drive.set_speed_angle(-1, angle)
         #         #rc.drive.set_speed_angle(-1, 0)
         #     else:
-        #         counter = 0 
+        #         counter = 0
         #         rc.drive.stop()
         # else:
         #     wall_follow(0.3)
 
         # rc.display.show_lidar(scan)
         wall_follow(0.3)
-    
-    elif id == 6: 
+
+    elif id == 6:
         print("in ramp lanes")
         cur_state = State.rampLane
         # scan = rc.lidar.get_samples()
-    
+
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
         #     counter += rc.get_delta_time()
-        #     #print("counter: " + str(counter)) 
-        #     if counter < 2: 
+        #     #print("counter: " + str(counter))
+        #     if counter < 2:
         #         rc.drive.set_speed_angle(-1, angle)
         #         #rc.drive.set_speed_angle(-1, 0)
         #     else:
-        #         counter = 0 
+        #         counter = 0
         #         rc.drive.stop()
         # else:
         #     wall_follow(0.3)
 
         # rc.display.show_lidar(scan)
         lane_follow(0.3)
-    
-    elif id == 7: 
+
+    elif id == 7:
         print("in hazard valley")
         cur_state = State.hazardWall
         # scan = rc.lidar.get_samples()
-    
+
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
         #     counter += rc.get_delta_time()
-        #     #print("counter: " + str(counter)) 
-        #     if counter < 2: 
+        #     #print("counter: " + str(counter))
+        #     if counter < 2:
         #         rc.drive.set_speed_angle(-1, angle)
         #         #rc.drive.set_speed_angle(-1, 0)
         #     else:
-        #         counter = 0 
+        #         counter = 0
         #         rc.drive.stop()
         # else:
         #     wall_follow(0.3)
@@ -598,34 +611,34 @@ def update():
 
         #need to update with safety stop !!!!!
         line_follow(0.3)
-    
-    elif id == 8: 
+
+    elif id == 8:
         print("in brick wall")
         cur_state = State.brickWall
         scan = rc.lidar.get_samples()
-    
+
         if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
-            
+
             counter += rc.get_delta_time()
-            #print("counter: " + str(counter)) 
-            if counter < 2: 
+            #print("counter: " + str(counter))
+            if counter < 2:
                 rc.drive.set_speed_angle(-1, angle)
                 #rc.drive.set_speed_angle(-1, 0)
             else:
-                counter = 0 
+                counter = 0
                 rc.drive.stop()
         else:
             wall_follow(0.2)
 
         rc.display.show_lidar(scan)
-    
+
     update_contour()
     scan= rc.lidar.get_samples()
     if(rc_utils.get_lidar_average_distance(scan, 0, 1))<200:
 
     purple_contour =rc_utils.get_largest_contour(rc_utils.find_contours(image, PURPLE[0], PURPLE[1]),30)
     if(purple_contour is not None):
-        cur_state= 1 
+        cur_state= 1
         slalom()
         red1_contour=rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
         red1_area= rc_utils.get_contour_area(red1_contour)
@@ -642,7 +655,7 @@ def update():
     if contour_center is not None:
         # Current implementation: bang-bang control (very choppy)
         # TODO (warmup): Implement a smoother way to follow the line
-        
+
         # Kp = 0.4
         # angle = Kp*(contour_center[1]-(rc.camera.get_width()))
         #angle = (contour_center[1])
@@ -719,10 +732,3 @@ def update_slow():
 if __name__ == "__main__":
     rc.set_start_update(start, update, update_slow)
     rc.go()
-
-    
-
-    
-    
-
-
