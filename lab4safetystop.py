@@ -71,18 +71,17 @@ def update():
     # Use the triggers to control the car's speed
     scan = rc.lidar.get_samples()
     
-    if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 150:
-        
+    if (rc_utils.get_lidar_average_distance(scan, 0, 10)) < 100:
         counter += rc.get_delta_time()
-        print("counter: " + str(counter)) 
-        if counter < 2: 
+        #print("counter: " + str(counter)) 
+        if counter < 0.1: 
             rc.drive.set_speed_angle(-1, angle)
             #rc.drive.set_speed_angle(-1, 0)
         else:
             counter = 0 
             rc.drive.stop()
     else:
-        rc.drive.set_speed_angle(1, 0)
+        rc.drive.set_speed_angle(0.15, 0)
 
     rc.display.show_lidar(scan)
     # Use the left joystick to control the angle of the front wheels
