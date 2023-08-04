@@ -134,7 +134,7 @@ def ramp():
     if(rc.get_lidar_average_distance(scan,0,20)):
         rc.drive.set_speed_angle(0.3, 0)
     else:
-        rc.drive.set_speed_angle(0.1,0)
+        right_wall_follow()
 
 def line_follow():
 
@@ -164,7 +164,7 @@ def line_follow():
     speed = 0.138
     rc.drive.set_speed_angle(speed, angle)
 
-def wall_follow():
+def right_wall_follow(setpoint=40,straight_speedp=0.165):
     global angle
     global scan
     global sharp
@@ -175,11 +175,11 @@ def wall_follow():
 
     Kp=0.1
     Kd=0.3
-    dset=40
+    dset=setpoint
     sharp_front_distance=125
-    straight_speed=0.165
+    straight_speed=straight_speedp
     turn_speed =0.183
-
+    #
     remapvalue= dset
     max_dis_gap=150
     rightdist= rc_utils.get_lidar_average_distance(scan,90, 40)
@@ -211,6 +211,52 @@ def wall_follow():
 
         rc.drive.set_speed_angle(straight_speed,angle)
 
+def left_wall_follow(setpoint=40,straight_speedp=0.165):
+    global angle
+    global scan
+    global sharp
+    global lastd
+    global total_lidar_pts
+   
+    scan= rc.lidar.get_samples()
+
+    Kp=0.1
+    Kd=0.3
+    dset=setpoint
+    sharp_front_distance=125
+    straight_speed=straight_speedp
+    turn_speed =0.183
+
+    remapvalue= dset
+    max_dis_gap=150
+    rightdist= rc_utils.get_lidar_average_distance(scan,270, 40)
+    frontdist = rc_utils.get_lidar_average_distance(scan,0, 40)
+    print('right distance',rightdist)
+    print('front distance',frontdist)
+
+    sharp=False
+    if(frontdist<sharp_front_distance):
+        print("min",(np.argmin(scan)))
+       
+        shift_scan=np.roll(scan,total_lidar_pts//4)
+        maxangle=np.argmax(shift_scan[0:total_lidar_pts//2]) #only look at front
+        print("max",(maxangle))
+
+        if (maxangle<(rc.lidar.get_num_samples()//4)):
+            rc.drive.set_speed_angle(turn_speed,-1)  
+        else:
+            rc.drive.set_speed_angle(turn_speed,1)  
+        sharp = True                     
+   
+    if(not sharp):
+        angle= Kp * (rightdist - dset)+Kd*(rightdist-lastd)
+        lastd= rightdist
+        angle/=remapvalue
+        print('old angle',angle)
+        angle=clamp(angle,-1,1)
+        print('new angle:',angle)    
+
+        rc.drive.set_speed_angle(straight_speed,angle)
 
   
 
@@ -241,9 +287,100 @@ def lane_follow(speedVar = 0.2):
     global contour_center
     global lasterr
     speed = speedVar
+    def update_contourlanefollow():
+        """
+        Finds contours in the current color image and uses them to update contour_center
+        and contour_area
+        """
+        global contour_center
+        global contour_area
+        global cropped_image
+
+        image = rc.camera.get_color_image()
+        cropped_image = image[100:480, 0:400]
+        #print("image: " + str(image))
+        #print(type(image))
+        #rc.display.show_color_image(image)
+        # threshold = 50
+        # if rc_utils.get_contour_area(contours) < threshold: 
+        #         contours = None 
+        if cropped_image is None:
+            contour_center = None
+            contour_area = 0
+            print("image is none")
+        else:
+            # TODO (challenge 1): Search for multiple tape colors with a priority order
+            # (currently we only search for blue)
+
+            # Crop the image to the floor directly in front of the car
+            # image = rc_utils.crop(image, CROP_FLOOR[0], CROP_FLOOR[1])
+            # image = rc_utils.crop(image, CROP_ROOF[0], CROP_ROOF[1])
+            #image = image[100:320,::]
+            if rc.camera.get_width() == 0:
+                print("FAIL!")
+            else:
+                rc.display.show_color_image(cropped_image)
+            # Find all of the blue contours
+        # print("find contours: " + str(rc_utils.find_contours(image, GREEN[0], GREEN[1])))
+            # if(np.size(rc_utils.find_contours(image, RED[0], RED[1]))!=0):
+            #     contours = rc_utils.get_largest_contour(rc_utils.find_contours(image, RED[0], RED[1]),30)
+            # else:
+            
+        # print("found green")
+            #print("contours: " + str(contours))
+            
+            contours = rc_utils.get_largest_contour(rc_utils.find_contours(cropped_image, BLUE[0], BLUE[1]),50)
+            
+            print(contours)
+            #if (np.size(contours)==0 ):
+            if (not (contours is not None)):
+            # print("contours: " + str(contours))
+                
+                contours = rc_utils.get_largest_contour(rc_utils.find_contours(cropped_image, RED[0], RED[1]),50)
+                print("found red")
+                # if rc_utils.get_contour_area(contours) < threshold: 
+                #     contours = None 
+                #print("contours: " + str(contours))
+            #  if(contours.all()!=None):
+            #     print("found blue")
+        #     print(contours)
+                if (not (contours is not None)):
+                #   print("found red")
+                    #print("contours: " + str(contours))
+                    contours = rc_utils.get_largest_contour(rc_utils.find_contours(cropped_image, GREEN[0], GREEN[1]),50)
+                    # if rc_utils.get_contour_area(contours) < threshold: 
+                    #     contours = None 
+                    print("found green")
+                if(not (contours is not None)):
+                    contours= rc_utils.get_largest_contour(rc_utils.find_contours(cropped_image, YELLOW[0], YELLOW[1]),50)
+                    # if rc_utils.get_contour_area(contours) < threshold: 
+                    #     contours = None 
+            # Select the largest contour
+            #print("final counter",contours)
+        # print(np.shape(contours))
+            #contour = rc_utils.get_largest_contour(contours, MIN_CONTOUR_AREA)
+            #check if image is None
+            #print(contour_center)
+        # print("contour:",contours)
+            if contours is not None:
+                # Calculate contour information
+                contour_center = rc_utils.get_contour_center(contours)
+                contour_area = rc_utils.get_contour_area(contours)
+            # print("contour center: " + str(contour_center))
+                # Draw contour onto the image
+                rc_utils.draw_contour(cropped_image, contours)
+                rc.display.show_color_image(cropped_image)
+                rc_utils.draw_circle(cropped_image, contour_center)
+
+            else:
+                contour_center = None
+                contour_area = 0
+
+            # Display the image to the screen
+            rc.display.show_color_image(cropped_image)
    # print("in update")
     # Search for contours in the current color image
-    update_contour()
+    update_contourlanefollow()
     # Choose an angle based on contour_center
     # If we could not find a contour, keep the previous angle
    # print(contour_center)
@@ -278,13 +415,16 @@ def lane_follow(speedVar = 0.2):
             #rc_utils.get_lidar_average_distance(scan, 180,20) >= (leftDistance-2) and rc_utils.get_lidar_average_distance(scan, 180,20) <= (leftDistance+2)
             #angle = rc_utils.remap_range(angle,  Kp*-setpoint, Kp*setpoint, -1, 1)
             # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
-            pangle = ((contour_center[1]/160)*2-1)
-           #angle=clamp(Kp*pangle,-1,1)
+            pangle = ((contour_center[1]/100)*2-1)
+            #angle=clamp(Kp*pangle,-1,1)
             dangle= Kd*((contour_center[1]-lasterr)/rc.get_delta_time())
             lasterr=(contour_center[1])
+            print("angle before clamp: " + str(angle))
+            angle = Kp*pangle+Kd*dangle
+            print("angle before clamp: " + str(angle))
             angle= (clamp(Kp*pangle+Kd*dangle,-1,1))
-            rc.drive.set_speed_angle(speed, angle)
-            # print("first angle: ", angle)
+
+          # print("first angle: ", angle)
             # angle = clamp(angle, 0, rc.camera.get_width())
             # print("angle after clamping: ", angle)
             # angle = rc_utils.remap_range(angle, 0, rc.camera.get_width(), -1, 1)
@@ -493,12 +633,14 @@ def update():
     cur_state = State.goFast
     if cur_state == State.goFast:
         print("in gofast")
-        wall_follow()
+        right_wall_follow()
         if id == 1:
             cur_state = State.overpass
 
     elif cur_state == State.overpass:
         print("in overpass")
+        ramp()
+
         # scan = rc.lidar.get_samples()
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
             
@@ -527,14 +669,14 @@ def update():
 
     elif cur_state == State.canyonMazeWall: 
         print("in canyon maze")
-        wall_follow()
+        right_wall_follow(40,0.138)
         if id == 4:
             cur_state = State.goFast
 
     elif cur_state == State.goFast: 
         safety_stop()
         print("in go fast")
-        wall_follow()
+        right_wall_follow(40,0.17)
 
         if id == 5:
             cur_state = State.slalom
@@ -547,16 +689,21 @@ def update():
     
     elif cur_state == State.rampLane: 
         safety_stop()
+        cropped_image = image[100:480, 0:400]
         print("in ramp lanes")
         
-        lane_follow(0.3)
+        lane_follow(0.14)
         if id == 7:
             cur_state = State.hazardWall
     
     elif cur_state == State.hazardWall: 
         print("in hazard valley")
         cur_state = State.hazardWall
-        wall_follow()
+        right_wall_follow(40,0.138)
+    elif cur_state == State.brickWall:
+        print("in brick wall")
+        right_wall_follow(27,0.138)
+        
     
     
 
