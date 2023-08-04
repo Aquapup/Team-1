@@ -38,7 +38,7 @@ class State(Enum):
     # parking=4
 
 
-cur_state: State = State.line_follow
+cur_state: State = State.goFast
 #variables 
 global counter 
 counter = 0 
@@ -50,6 +50,7 @@ global blue3red3
 blue3red3 =0
 global blue4red4
 blue4red4 =0
+
 
 
 
@@ -90,6 +91,8 @@ numscan=360
 lasterr=0
 coneColor=None
 MIN_CONTOUR_AREA = 40
+xid = 4
+oldid = 4
 
 coneColor = None
 #functions 
@@ -115,6 +118,7 @@ def start():
     print("starting program")
     # Set initial driving speed and angle
     rc.drive.set_speed_angle(speed, angle)
+    cur_state = State.goFast
 
     # Set update_slow to refresh every half second
     rc.set_update_slow_time(0.5)
@@ -131,11 +135,13 @@ def start():
     )
 def ramp():
     scan= rc.lidar.get_samples()
-    if(rc.get_lidar_average_distance(scan,0,20)):
-        rc.drive.set_speed_angle(0.3, 0)
+    if(rc_utils.get_lidar_average_distance(scan,0,20)<15):
+        rc.drive.set_speed_angle(0.42, 0)
     else:
-        right_wall_follow()
-
+        rc.drive.set_speed_angle(0.14,0)
+# ORRRRR
+   # if(rc_utils.get_lidar_closest_point(scan, ())>20):
+        
 def line_follow():
 
     global speed
@@ -257,8 +263,6 @@ def left_wall_follow(setpoint=40,straight_speedp=0.165):
         print('new angle:',angle)    
 
         rc.drive.set_speed_angle(straight_speed,angle)
-
-  
 
 def safety_stop():
     global counter 
@@ -617,31 +621,37 @@ def update():
     global ar_markers
     global angle 
     global follow
-   
+    global xid 
+    global oldid
     counter+= rc.get_delta_time()
     image = rc.camera.get_color_image()
+    rc.display.show_color_image(image)
     markers = rc_utils.get_ar_markers(image)
     follow = False
 
     
 
     if len(markers) > 0:
-        id = markers[0].get_id()
+        xid = markers[0].get_id()
+        
     else:
-        id = 1000000
+        oldid = xid
+        
 
-    cur_state = State.goFast
+    #cur_state = State.goFast
+    print("ID IS:", xid)
     if cur_state == State.goFast:
         print("in gofast")
         right_wall_follow()
-        if id == 1:
+        if xid == 1:
             cur_state = State.overpass
+            print(cur_state)
 
     elif cur_state == State.overpass:
         print("in overpass")
         ramp()
 
-        # scan = rc.lidar.get_samples()
+        # scan = rc.lidar.get_samples()e
         # if (rc_utils.get_lidar_average_distance(scan, 0, 1)) < 50:
             
         #     counter += rc.get_delta_time()
@@ -655,7 +665,7 @@ def update():
         # else:
         #     wall_follow(0.3)
 
-        if id == 2:
+        if oldid == 2:
             cur_state = State.graveyardLineFollow
 
   
@@ -664,7 +674,7 @@ def update():
         print("in graveward")
         line_follow()
 
-        if id == 3:
+        if oldid == 3:
             cur_state = State.canyonMazeWall
 
     elif cur_state == State.canyonMazeWall: 
@@ -678,13 +688,13 @@ def update():
         print("in go fast")
         right_wall_follow(40,0.17)
 
-        if id == 5:
+        if oldid == 5:
             cur_state = State.slalom
     elif cur_state == State.slalom: 
         print("in cone slalom")
         slalom()
 
-        if id == 6:
+        if oldid == 6:
             cur_state = State.rampLane
     
     elif cur_state == State.rampLane: 
@@ -693,16 +703,18 @@ def update():
         print("in ramp lanes")
         
         lane_follow(0.14)
-        if id == 7:
+        if oldid == 7:
             cur_state = State.hazardWall
     
     elif cur_state == State.hazardWall: 
         print("in hazard valley")
         cur_state = State.hazardWall
         right_wall_follow(40,0.138)
+        if oldid == 8:
+            cur_state = State.brickWall
     elif cur_state == State.brickWall:
         print("in brick wall")
-        right_wall_follow(27,0.138)
+        left_wall_follow(27,0.138)
         
     
     
